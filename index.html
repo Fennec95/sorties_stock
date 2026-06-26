@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bon de sortie</title>
+<style>
+  :root { --vert:#2e7d32; --bord:#9aa0a6; --bg:#fff; --txt:#1a1a1a; --gris:#f1f3f4; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+         color:var(--txt); background:var(--bg); padding:14px; max-width:520px; margin:auto; }
+  h1 { font-size:18px; letter-spacing:1px; text-align:center; margin:6px 0 16px; }
+  label { display:block; font-size:14px; margin:14px 0 4px; font-weight:600; }
+  label .req { color:#c62828; }
+  input[type=text], input[type=number] {
+    width:100%; padding:11px; font-size:16px; border:1px solid var(--bord);
+    border-radius:6px; background:var(--bg); }
+  .row { display:flex; gap:8px; }
+  .row input { flex:1; }
+  button { font-size:15px; border:none; border-radius:6px; padding:11px 14px; cursor:pointer; }
+  .btn-scan { background:#1565c0; color:#fff; white-space:nowrap; }
+  .btn-clear { background:var(--gris); color:#333; }
+  .btn-valider { background:var(--vert); color:#fff; width:100%; font-size:17px;
+                 font-weight:700; padding:15px; margin-top:18px; letter-spacing:.5px; }
+  .btn-valider:disabled { background:#9e9e9e; }
+  #reader { width:100%; margin-top:8px; border-radius:8px; overflow:hidden; display:none; }
+  #date { color:#555; font-size:14px; margin-top:4px; }
+  canvas#sign { width:100%; height:150px; border:1px solid var(--bord);
+                border-radius:6px; touch-action:none; background:#fafafa; }
+  .sign-row { display:flex; justify-content:flex-end; margin-top:6px; }
+  #msg { margin-top:12px; padding:10px; border-radius:6px; font-size:14px; display:none; }
+  #msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+  #msg.err{ background:#ffebee; color:#b71c1c; display:block; }
+  #pending { font-size:13px; color:#b26a00; margin-top:8px; display:none; }
+  #pending button { background:#ffb300; color:#222; padding:6px 10px; margin-left:8px; font-size:13px; }
+</style>
+</head>
+<body>
+
+<h1>BON DE SORTIE</h1>
+
+<label>BF <span class="req">*</span></label>
+<div class="row">
+  <input type="text" id="bf" inputmode="text" autocomplete="off" placeholder="Scanner ou saisir">
+  <button type="button" class="btn-scan" id="scanBtn">📷 Scanner</button>
+</div>
+<div id="reader"></div>
+
+<label>Quantité <span class="req">*</span></label>
+<input type="number" id="quantite" inputmode="numeric" min="0" placeholder="0">
+
+<label>ML <span class="req">*</span></label>
+<input type="text" id="ml" autocomplete="off">
+
+<label>Technicien <span class="req">*</span></label>
+<input type="text" id="technicien" autocomplete="off">
+
+<label>Date</label>
+<div id="date"></div>
+
+<label>Signature</label>
+<canvas id="sign"></canvas>
+<div class="sign-row"><button type="button" class="btn-clear" id="clearSign">Effacer</button></div>
+
+<button type="button" class="btn-valider" id="valider">✔ VALIDER LA SORTIE</button>
+
+<div id="msg"></div>
+<div id="pending"></div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+/* ====================================================================
+   CONFIG — colle ici l'URL du déclencheur HTTP de ton flow Power Automate
+   ==================================================================== */
+const FLOW_URL = "COLLER_ICI_URL_DU_FLOW_POWER_AUTOMATE";
+// Jeton partagé : doit être IDENTIQUE à celui contrôlé dans le flow.
+// Génère une valeur longue et aléatoire (ex. un GUID) et remplace ci-dessous.
+const SHARED_TOKEN = "ae9ea55b7439835b8d05d167738ec8160b1496ca4a77b408366c4c2e8060b2ca";
+/* ==================================================================== */
+
+const $ = id => document.getElementById(id);
+const msg = $("msg");
+
+/* ---- Date affichée (auto) ---- */
+function nowStr(){
+  const d = new Date(), p = n => String(n).padStart(2,"0");
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+$("date").textContent = nowStr();
+setInterval(()=> $("date").textContent = nowStr(), 30000);
+
+/* ---- Scanner code-barres (caméra) ---- */
+let scanner = null, scanning = false;
+$("scanBtn").addEventListener("click", async () => {
+  const reader = $("reader");
+  if (scanning){ await stopScan(); return; }
+  reader.style.display = "block";
+  $("scanBtn").textContent = "✖ Fermer";
+  scanner = new Html5Qrcode("reader");
+  try {
+    await scanner.start({ facingMode:"environment" },
+      { fps:10, qrbox:{ width:260, height:140 } },
+      decoded => { $("bf").value = decoded; navigator.vibrate && navigator.vibrate(80); stopScan(); },
+      () => {});
+    scanning = true;
+  } catch(e){
+    show("Caméra inaccessible. Vérifie l'autorisation, ou saisis le BF à la main. ("+e+")","err");
+    reader.style.display="none"; $("scanBtn").textContent="📷 Scanner";
+  }
+});
+async function stopScan(){
+  if (scanner){ try{ await scanner.stop(); scanner.clear(); }catch(_){} }
+  scanning = false; $("reader").style.display="none"; $("scanBtn").textContent="📷 Scanner";
+}
+
+/* ---- Pavé signature ---- */
+const cv = $("sign"), ctx = cv.getContext("2d");
+function fitCanvas(){
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio||1;
+  cv.width = r.width*dpr; cv.height = r.height*dpr; ctx.scale(dpr,dpr);
+  ctx.lineWidth = 2.2; ctx.lineCap="round"; ctx.strokeStyle="#111";
+}
+fitCanvas(); window.addEventListener("resize", fitCanvas);
+let drawing=false, hasSign=false;
+function pos(e){ const r=cv.getBoundingClientRect(); const t=e.touches?e.touches[0]:e;
+  return { x:t.clientX-r.left, y:t.clientY-r.top }; }
+function start(e){ drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); }
+function move(e){ if(!drawing)return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasSign=true; e.preventDefault(); }
+function end(){ drawing=false; }
+cv.addEventListener("mousedown",start); cv.addEventListener("mousemove",move);
+window.addEventListener("mouseup",end);
+cv.addEventListener("touchstart",start,{passive:false});
+cv.addEventListener("touchmove",move,{passive:false});
+cv.addEventListener("touchend",end);
+$("clearSign").addEventListener("click", ()=>{ ctx.clearRect(0,0,cv.width,cv.height); hasSign=false; });
+
+/* ---- Validation + envoi ---- */
+function show(t,cls){ msg.textContent=t; msg.className=cls; }
+
+$("valider").addEventListener("click", async () => {
+  const bf=$("bf").value.trim(), q=$("quantite").value.trim(),
+        ml=$("ml").value.trim(), tech=$("technicien").value.trim();
+  if(!bf||!q||!ml||!tech){ show("Remplis tous les champs obligatoires (*).","err"); return; }
+
+  const data = {
+    Token: SHARED_TOKEN,
+    Date: nowStr(),
+    BF: bf,
+    Technicien: tech,
+    ML: ml,
+    Quantite: q,
+    Signature: hasSign ? cv.toDataURL("image/png") : ""
+  };
+
+  $("valider").disabled = true; show("Envoi…","ok");
+  const ok = await send(data);
+  if(ok){
+    show("Sortie enregistrée ✅","ok");
+    $("bf").value=$("quantite").value=$("ml").value="";
+    ctx.clearRect(0,0,cv.width,cv.height); hasSign=false;
+    $("bf").focus();
+  } else {
+    queue(data);
+    show("Hors ligne : enregistré localement, sera renvoyé.","err");
+  }
+  $("valider").disabled = false;
+  renderPending();
+});
+
+async function send(data){
+  if(FLOW_URL.startsWith("COLLER")){ show("⚠ URL du flow non configurée dans le HTML.","err"); return false; }
+  try{
+    // text/plain = pas de pré-vol CORS ; le flow parse le JSON
+    const r = await fetch(FLOW_URL, { method:"POST",
+      headers:{ "Content-Type":"text/plain" }, body: JSON.stringify(data) });
+    return r.ok;
+  }catch(_){ return false; }
+}
+
+/* ---- File d'attente hors-ligne (localStorage) ---- */
+const KEY="sorties_pending";
+function getQ(){ try{ return JSON.parse(localStorage.getItem(KEY))||[] }catch{ return [] } }
+function setQ(a){ localStorage.setItem(KEY, JSON.stringify(a)); }
+function queue(d){ const a=getQ(); a.push(d); setQ(a); }
+function renderPending(){
+  const a=getQ(), el=$("pending");
+  if(!a.length){ el.style.display="none"; return; }
+  el.style.display="block";
+  el.innerHTML = `⏳ ${a.length} sortie(s) en attente d'envoi <button id="retry">Renvoyer</button>`;
+  $("retry").onclick = flush;
+}
+async function flush(){
+  let a=getQ();
+  for(let i=0;i<a.length;){ if(await send(a[i])){ a.splice(i,1); setQ(a);} else break; }
+  renderPending();
+  if(!getQ().length) show("File d'attente vidée ✅","ok");
+}
+window.addEventListener("online", flush);
+renderPending();
+</script>
+</body>
+</html>
