@@ -31,8 +31,16 @@
   #msg { margin-top:12px; padding:10px; border-radius:6px; font-size:14px; display:none; }
   #msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
   #msg.err{ background:#ffebee; color:#b71c1c; display:block; }
-  #pending { font-size:13px; color:#b26a00; margin-top:8px; display:none; }
-  #pending button { background:#ffb300; color:#222; padding:6px 10px; margin-left:8px; font-size:13px; }
+  #histo { margin-top:18px; display:none; }
+  .htitle { display:flex; justify-content:space-between; align-items:center;
+            font-size:14px; font-weight:700; color:#b26a00; margin-bottom:8px; }
+  .htitle button { background:#1565c0; color:#fff; padding:8px 12px; font-size:13px; }
+  .htitle button:disabled { background:#9e9e9e; }
+  .hrow { display:flex; gap:8px; align-items:center; font-size:13px;
+          padding:8px; border:1px solid #e6e6e6; border-radius:6px; margin-bottom:6px; background:#fafafa; }
+  .hrow .bf { font-weight:700; }
+  .hrow .grow { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#555; }
+  .hdel { margin-left:auto; background:#ffebee; color:#b71c1c; padding:5px 9px; font-size:13px; }
 </style>
 </head>
 <body>
@@ -62,10 +70,11 @@
 <canvas id="sign"></canvas>
 <div class="sign-row"><button type="button" class="btn-clear" id="clearSign">Effacer</button></div>
 
-<button type="button" class="btn-valider" id="valider">✔ VALIDER LA SORTIE</button>
+<div id="histo"></div>
+
+<button type="button" class="btn-valider" id="valider">✔ AJOUTER À LA LISTE</button>
 
 <div id="msg"></div>
-<div id="pending"></div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
@@ -152,19 +161,13 @@ $("valider").addEventListener("click", async () => {
     Signature: hasSign ? cv.toDataURL("image/png") : ""
   };
 
-  $("valider").disabled = true; show("Envoi…","ok");
-  const ok = await send(data);
-  if(ok){
-    show("Sortie enregistrée ✅","ok");
-    $("bf").value=$("quantite").value=$("ml").value="";
-    ctx.clearRect(0,0,cv.width,cv.height); hasSign=false;
-    $("bf").focus();
-  } else {
-    queue(data);
-    show("Hors ligne : enregistré localement, sera renvoyé.","err");
-  }
-  $("valider").disabled = false;
-  renderPending();
+  // Stockage local : la ligne entre dans la liste, l'envoi se fait ensuite
+  queue(data);
+  show("Ligne ajoutée à la liste ✅","ok");
+  $("bf").value=$("quantite").value=$("ml").value="";
+  ctx.clearRect(0,0,cv.width,cv.height); hasSign=false;
+  $("bf").focus();
+  renderHisto();
 });
 
 async function send(data){
@@ -177,26 +180,43 @@ async function send(data){
   }catch(_){ return false; }
 }
 
-/* ---- File d'attente hors-ligne (localStorage) ---- */
+/* ---- Liste locale des lignes stockées avant envoi (localStorage) ---- */
 const KEY="sorties_pending";
 function getQ(){ try{ return JSON.parse(localStorage.getItem(KEY))||[] }catch{ return [] } }
 function setQ(a){ localStorage.setItem(KEY, JSON.stringify(a)); }
 function queue(d){ const a=getQ(); a.push(d); setQ(a); }
-function renderPending(){
-  const a=getQ(), el=$("pending");
-  if(!a.length){ el.style.display="none"; return; }
+function removeAt(i){ const a=getQ(); a.splice(i,1); setQ(a); renderHisto(); }
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function renderHisto(){
+  const a=getQ(), el=$("histo");
+  if(!a.length){ el.style.display="none"; el.innerHTML=""; return; }
   el.style.display="block";
-  el.innerHTML = `⏳ ${a.length} sortie(s) en attente d'envoi <button id="retry">Renvoyer</button>`;
-  $("retry").onclick = flush;
+  const rows = a.map((d,i)=>`<div class="hrow">
+      <span class="bf">${esc(d.BF)}</span>
+      <span>×${esc(d.Quantite)}</span>
+      <span class="grow">${esc(d.ML)} · ${esc(d.Technicien)}${d.Signature?' · 🖊':''}</span>
+      <button class="hdel" data-i="${i}">✕</button>
+    </div>`).join("");
+  el.innerHTML = `<div class="htitle">📋 ${a.length} ligne(s) en attente
+      <button id="envoyerTout">📤 Envoyer (${a.length})</button></div>${rows}`;
+  $("envoyerTout").onclick = flush;
+  el.querySelectorAll(".hdel").forEach(b => b.onclick = () => removeAt(+b.dataset.i));
 }
+
 async function flush(){
   let a=getQ();
-  for(let i=0;i<a.length;){ if(await send(a[i])){ a.splice(i,1); setQ(a);} else break; }
-  renderPending();
-  if(!getQ().length) show("File d'attente vidée ✅","ok");
+  if(!a.length) return;
+  const btn=$("envoyerTout"); if(btn){ btn.disabled=true; }
+  show("Envoi…","ok");
+  let sent=0;
+  for(let i=0;i<a.length;){ if(await send(a[i])){ a.splice(i,1); setQ(a); sent++; } else break; }
+  renderHisto();
+  if(!getQ().length) show(`Envoyé ✅ (${sent} ligne(s))`,"ok");
+  else show(`${sent} envoyée(s), ${getQ().length} restante(s). Réessaie « Envoyer ».`,"err");
 }
-window.addEventListener("online", flush);
-renderPending();
+window.addEventListener("online", () => { if(getQ().length) flush(); });
+renderHisto();
 </script>
 </body>
 </html>
