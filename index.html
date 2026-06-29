@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Bon de sortie</title>
 <style>
   :root{
@@ -11,9 +11,12 @@
     --danger:#f87171; --warn:#fbbf24; --radius:12px;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body{ margin:0; font-family:-apple-system,"Segoe UI",Roboto,Inter,Arial,sans-serif;
-        background:var(--bg); color:var(--txt); padding:18px 16px 40px;
-        max-width:540px; margin:auto; }
+  html{ -webkit-text-size-adjust:100%; }
+  html,body{ max-width:100%; overflow-x:hidden; }
+  body{ margin:0 auto; font-family:-apple-system,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+        background:var(--bg); color:var(--txt); max-width:540px;
+        padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+                calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
   h1{ font-size:15px; font-weight:600; letter-spacing:3px; text-align:center;
       color:var(--muted); text-transform:uppercase; margin:4px 0 22px; }
   label{ display:block; font-size:12.5px; letter-spacing:.4px; color:var(--muted);
@@ -69,7 +72,9 @@
   #overlay{ position:fixed; inset:0; background:rgba(4,6,10,.78); backdrop-filter:blur(3px);
             display:none; align-items:center; justify-content:center; padding:16px; z-index:50; }
   #modal{ width:100%; max-width:480px; background:var(--surface); border:1px solid var(--line);
-          border-radius:16px; padding:18px; max-height:88vh; display:flex; flex-direction:column;
+          border-radius:16px; padding:18px; display:flex; flex-direction:column;
+          max-height:88vh; max-height:88dvh;
+          margin-bottom:env(safe-area-inset-bottom);
           box-shadow:0 24px 70px rgba(0,0,0,.55); }
   .m-head{ display:flex; justify-content:space-between; align-items:center; }
   .m-head .t{ font-size:16px; font-weight:700; }
@@ -88,6 +93,23 @@
   .m-actions{ display:flex; gap:10px; margin-top:18px; }
   .m-cancel{ flex:1; background:var(--surface2); color:var(--txt); border:1px solid var(--line); }
   .m-confirm{ flex:2; background:var(--accent); color:#04210f; font-weight:700; }
+
+  /* ---- Adaptations petits téléphones ---- */
+  @media (max-width:380px){
+    body{ padding-left:max(12px,env(safe-area-inset-left)); padding-right:max(12px,env(safe-area-inset-right)); }
+    h1{ letter-spacing:2px; margin-bottom:18px; }
+    label{ margin-top:14px; }
+    input[type=text],input[type=number]{ padding:12px; }
+    .btn-scan{ padding:12px 12px; }
+    .hrow{ gap:8px; padding:11px 12px; }
+    .hrow .bf{ font-size:14px; }
+    .qty{ padding:4px 8px; font-size:12px; }
+    .m-qty{ width:74px; font-size:19px; padding:10px 4px; }
+    .m-bf{ font-size:14px; }
+  }
+  @media (max-height:560px){
+    canvas#sign{ height:110px; }
+  }
 </style>
 </head>
 <body>
