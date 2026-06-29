@@ -5,52 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Bon de sortie</title>
 <style>
-  :root { --vert:#2e7d32; --bord:#9aa0a6; --bg:#fff; --txt:#1a1a1a; --gris:#f1f3f4; }
-  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-         color:var(--txt); background:var(--bg); padding:14px; max-width:520px; margin:auto; }
-  h1 { font-size:18px; letter-spacing:1px; text-align:center; margin:6px 0 16px; }
-  label { display:block; font-size:14px; margin:14px 0 4px; font-weight:600; }
-  label .req { color:#c62828; }
-  input[type=text], input[type=number] {
-    width:100%; padding:11px; font-size:16px; border:1px solid var(--bord);
-    border-radius:6px; background:var(--bg); }
-  .row { display:flex; gap:8px; }
-  .row input { flex:1; }
-  button { font-size:15px; border:none; border-radius:6px; padding:11px 14px; cursor:pointer; }
-  .btn-scan { background:#1565c0; color:#fff; white-space:nowrap; }
-  .btn-clear { background:var(--gris); color:#333; }
-  .btn-valider { background:var(--vert); color:#fff; width:100%; font-size:17px;
-                 font-weight:700; padding:15px; margin-top:18px; letter-spacing:.5px; }
-  .btn-valider:disabled { background:#9e9e9e; }
-  #reader { width:100%; margin-top:8px; border-radius:8px; overflow:hidden; display:none; }
-  #date { color:#555; font-size:14px; margin-top:4px; }
-  canvas#sign { width:100%; height:150px; border:1px solid var(--bord);
-                border-radius:6px; touch-action:none; background:#fafafa; }
-  .sign-row { display:flex; justify-content:flex-end; margin-top:6px; }
-  #msg { margin-top:12px; padding:10px; border-radius:6px; font-size:14px; display:none; }
-  #msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
-  #msg.err{ background:#ffebee; color:#b71c1c; display:block; }
-  #histo { margin-top:18px; display:none; }
-  .htitle { display:flex; justify-content:space-between; align-items:center;
-            font-size:14px; font-weight:700; color:#b26a00; margin-bottom:8px; }
-  .htitle button { background:#1565c0; color:#fff; padding:8px 12px; font-size:13px; }
-  .htitle button:disabled { background:#9e9e9e; }
-  .hrow { display:flex; gap:8px; align-items:center; font-size:13px;
-          padding:8px; border:1px solid #e6e6e6; border-radius:6px; margin-bottom:6px; background:#fafafa; }
-  .hrow .bf { font-weight:700; }
-  .hrow .grow { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#555; }
-  .hdel { margin-left:auto; background:#ffebee; color:#b71c1c; padding:5px 9px; font-size:13px; }
+  :root{
+    --bg:#0c0e13; --surface:#161922; --surface2:#1e222d; --line:#2a2f3b;
+    --txt:#e8eaf0; --muted:#8b92a0; --accent:#22c55e; --accent2:#3b82f6;
+    --danger:#f87171; --warn:#fbbf24; --radius:12px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; font-family:-apple-system,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+        background:var(--bg); color:var(--txt); padding:18px 16px 40px;
+        max-width:540px; margin:auto; }
+  h1{ font-size:15px; font-weight:600; letter-spacing:3px; text-align:center;
+      color:var(--muted); text-transform:uppercase; margin:4px 0 22px; }
+  label{ display:block; font-size:12.5px; letter-spacing:.4px; color:var(--muted);
+         margin:16px 0 6px; text-transform:uppercase; font-weight:600; }
+  label .req{ color:var(--accent); }
+  input[type=text],input[type=number]{
+    width:100%; padding:13px 14px; font-size:16px; color:var(--txt);
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    outline:none; transition:border-color .15s, box-shadow .15s; }
+  input:focus{ border-color:var(--accent2); box-shadow:0 0 0 3px rgba(59,130,246,.18); }
+  input::placeholder{ color:#565d6b; }
+  .row{ display:flex; gap:10px; }
+  .row input{ flex:1; }
+  button{ font-size:15px; font-weight:600; border:none; border-radius:var(--radius);
+          padding:13px 16px; cursor:pointer; transition:filter .15s, opacity .15s; }
+  button:active{ filter:brightness(1.15); }
+  .btn-scan{ background:var(--surface2); color:var(--txt); border:1px solid var(--line);
+             white-space:nowrap; }
+  .btn-clear{ background:transparent; color:var(--muted); border:1px solid var(--line);
+              padding:7px 12px; font-size:13px; }
+  .btn-add{ background:var(--accent); color:#04210f; width:100%; font-size:16px;
+            font-weight:700; padding:16px; margin-top:20px; letter-spacing:.5px; }
+  .btn-add:disabled{ background:#39414c; color:#7d8493; }
+  #reader{ width:100%; margin-top:10px; border-radius:var(--radius); overflow:hidden; display:none; }
+  #date{ color:var(--muted); font-size:14px; padding:4px 2px; }
+  canvas#sign{ width:100%; height:150px; border:1px solid var(--line);
+               border-radius:var(--radius); touch-action:none; background:var(--surface); }
+  .sign-row{ display:flex; justify-content:flex-end; margin-top:8px; }
+  #msg{ margin-top:14px; padding:12px 14px; border-radius:var(--radius); font-size:14px; display:none; }
+  #msg.ok{ background:rgba(34,197,94,.12); color:#7ee2a4; border:1px solid rgba(34,197,94,.3); display:block; }
+  #msg.err{ background:rgba(248,113,113,.12); color:#fca5a5; border:1px solid rgba(248,113,113,.3); display:block; }
+
+  #histo{ margin-top:24px; display:none; }
+  .htitle{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .htitle .lbl{ font-size:12.5px; letter-spacing:.6px; text-transform:uppercase;
+                color:var(--muted); font-weight:600; }
+  .btn-send{ background:var(--accent2); color:#fff; padding:10px 14px; font-size:13.5px; }
+  .btn-send:disabled{ background:#39414c; color:#7d8493; }
+  .hrow{ display:flex; align-items:center; gap:12px; padding:13px 14px;
+         background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+         margin-bottom:8px; }
+  .hrow .bf{ font-weight:700; font-size:15px; letter-spacing:.3px; }
+  .hrow .meta{ flex:1; min-width:0; font-size:12.5px; color:var(--muted);
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .qty{ background:var(--surface2); border:1px solid var(--line); color:var(--accent);
+        font-weight:700; font-size:13px; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .grouped{ color:var(--warn); font-size:11px; margin-left:6px; }
+  .hdel{ background:transparent; color:var(--danger); border:1px solid transparent;
+         padding:6px 8px; font-size:15px; line-height:1; }
+  .hdel:active{ background:rgba(248,113,113,.12); }
 </style>
 </head>
 <body>
 
-<h1>BON DE SORTIE</h1>
+<h1>Bon de sortie</h1>
 
 <label>BF <span class="req">*</span></label>
 <div class="row">
   <input type="text" id="bf" inputmode="text" autocomplete="off" placeholder="Scanner ou saisir">
-  <button type="button" class="btn-scan" id="scanBtn">📷 Scanner</button>
+  <button type="button" class="btn-scan" id="scanBtn">⊞ Scanner</button>
 </div>
 <div id="reader"></div>
 
@@ -72,62 +95,60 @@
 
 <div id="histo"></div>
 
-<button type="button" class="btn-valider" id="valider">✔ AJOUTER À LA LISTE</button>
+<button type="button" class="btn-add" id="valider">+ Ajouter à la liste</button>
 
 <div id="msg"></div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 /* ====================================================================
-   CONFIG — colle ici l'URL du déclencheur HTTP de ton flow Power Automate
+   CONFIG
    ==================================================================== */
 const FLOW_URL = "https://defaultcae7d06108f340dd80c33c0b888922.4a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8b800467ce2e4947bd6b32b48f302009/triggers/manual/paths/invoke?api-version=1";
-// Jeton partagé : doit être IDENTIQUE à celui contrôlé dans le flow.
-// Génère une valeur longue et aléatoire (ex. un GUID) et remplace ci-dessous.
 const SHARED_TOKEN = "ae9ea55b7439835b8d05d167738ec8160b1496ca4a77b408366c4c2e8060b2ca";
 /* ==================================================================== */
 
 const $ = id => document.getElementById(id);
 const msg = $("msg");
+function show(t,cls){ msg.textContent=t; msg.className=cls; }
 
 /* ---- Date affichée (auto) ---- */
 function nowStr(){
-  const d = new Date(), p = n => String(n).padStart(2,"0");
+  const d=new Date(), p=n=>String(n).padStart(2,"0");
   return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 $("date").textContent = nowStr();
 setInterval(()=> $("date").textContent = nowStr(), 30000);
 
 /* ---- Scanner code-barres (caméra) ---- */
-let scanner = null, scanning = false;
+let scanner=null, scanning=false;
 $("scanBtn").addEventListener("click", async () => {
-  const reader = $("reader");
-  if (scanning){ await stopScan(); return; }
-  reader.style.display = "block";
-  $("scanBtn").textContent = "✖ Fermer";
-  scanner = new Html5Qrcode("reader");
-  try {
+  const reader=$("reader");
+  if(scanning){ await stopScan(); return; }
+  reader.style.display="block"; $("scanBtn").textContent="✕ Fermer";
+  scanner=new Html5Qrcode("reader");
+  try{
     await scanner.start({ facingMode:"environment" },
       { fps:10, qrbox:{ width:260, height:140 } },
-      decoded => { $("bf").value = decoded; navigator.vibrate && navigator.vibrate(80); stopScan(); },
-      () => {});
-    scanning = true;
-  } catch(e){
-    show("Caméra inaccessible. Vérifie l'autorisation, ou saisis le BF à la main. ("+e+")","err");
-    reader.style.display="none"; $("scanBtn").textContent="📷 Scanner";
+      decoded => { $("bf").value=decoded; navigator.vibrate && navigator.vibrate(80); stopScan(); },
+      ()=>{});
+    scanning=true;
+  }catch(e){
+    show("Caméra inaccessible. Autorise-la, ou saisis le BF à la main.","err");
+    reader.style.display="none"; $("scanBtn").textContent="⊞ Scanner";
   }
 });
 async function stopScan(){
-  if (scanner){ try{ await scanner.stop(); scanner.clear(); }catch(_){} }
-  scanning = false; $("reader").style.display="none"; $("scanBtn").textContent="📷 Scanner";
+  if(scanner){ try{ await scanner.stop(); scanner.clear(); }catch(_){} }
+  scanning=false; $("reader").style.display="none"; $("scanBtn").textContent="⊞ Scanner";
 }
 
 /* ---- Pavé signature ---- */
-const cv = $("sign"), ctx = cv.getContext("2d");
+const cv=$("sign"), ctx=cv.getContext("2d");
 function fitCanvas(){
-  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio||1;
-  cv.width = r.width*dpr; cv.height = r.height*dpr; ctx.scale(dpr,dpr);
-  ctx.lineWidth = 2.2; ctx.lineCap="round"; ctx.strokeStyle="#111";
+  const r=cv.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  cv.width=r.width*dpr; cv.height=r.height*dpr; ctx.scale(dpr,dpr);
+  ctx.lineWidth=2.2; ctx.lineCap="round"; ctx.strokeStyle="#e8eaf0";
 }
 fitCanvas(); window.addEventListener("resize", fitCanvas);
 let drawing=false, hasSign=false;
@@ -136,57 +157,33 @@ function pos(e){ const r=cv.getBoundingClientRect(); const t=e.touches?e.touches
 function start(e){ drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); }
 function move(e){ if(!drawing)return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasSign=true; e.preventDefault(); }
 function end(){ drawing=false; }
-cv.addEventListener("mousedown",start); cv.addEventListener("mousemove",move);
-window.addEventListener("mouseup",end);
-cv.addEventListener("touchstart",start,{passive:false});
-cv.addEventListener("touchmove",move,{passive:false});
-cv.addEventListener("touchend",end);
+cv.addEventListener("mousedown",start); cv.addEventListener("mousemove",move); window.addEventListener("mouseup",end);
+cv.addEventListener("touchstart",start,{passive:false}); cv.addEventListener("touchmove",move,{passive:false}); cv.addEventListener("touchend",end);
 $("clearSign").addEventListener("click", ()=>{ ctx.clearRect(0,0,cv.width,cv.height); hasSign=false; });
 
-/* ---- Validation + envoi ---- */
-function show(t,cls){ msg.textContent=t; msg.className=cls; }
-
-$("valider").addEventListener("click", async () => {
-  const bf=$("bf").value.trim(), q=$("quantite").value.trim(),
-        ml=$("ml").value.trim(), tech=$("technicien").value.trim();
-  if(!bf||!q||!ml||!tech){ show("Remplis tous les champs obligatoires (*).","err"); return; }
-
-  const data = {
-    Token: SHARED_TOKEN,
-    Date: nowStr(),
-    BF: bf,
-    Technicien: tech,
-    ML: ml,
-    Quantite: q,
-    Signature: hasSign ? cv.toDataURL("image/png") : ""
-  };
-
-  // Stockage local : la ligne entre dans la liste, l'envoi se fait ensuite
-  queue(data);
-  show("Ligne ajoutée à la liste ✅","ok");
-  $("bf").value=$("quantite").value=$("ml").value="";
-  ctx.clearRect(0,0,cv.width,cv.height); hasSign=false;
-  $("bf").focus();
-  renderHisto();
-});
-
-async function send(data){
-  if(FLOW_URL.startsWith("COLLER")){ show("⚠ URL du flow non configurée dans le HTML.","err"); return false; }
-  try{
-    // text/plain = pas de pré-vol CORS ; le flow parse le JSON
-    const r = await fetch(FLOW_URL, { method:"POST",
-      headers:{ "Content-Type":"text/plain" }, body: JSON.stringify(data) });
-    return r.ok;
-  }catch(_){ return false; }
-}
-
-/* ---- Liste locale des lignes stockées avant envoi (localStorage) ---- */
+/* ---- Liste locale + regroupement par item ---- */
 const KEY="sorties_pending";
 function getQ(){ try{ return JSON.parse(localStorage.getItem(KEY))||[] }catch{ return [] } }
 function setQ(a){ localStorage.setItem(KEY, JSON.stringify(a)); }
-function queue(d){ const a=getQ(); a.push(d); setQ(a); }
 function removeAt(i){ const a=getQ(); a.splice(i,1); setQ(a); renderHisto(); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+// "même item" = même BF + même ML + même Technicien
+function keyOf(d){ return [d.BF.trim().toLowerCase(), d.ML.trim().toLowerCase(), d.Technicien.trim().toLowerCase()].join("|"); }
+
+function addLine(d){
+  const a=getQ();
+  const idx=a.findIndex(x => keyOf(x)===keyOf(d));
+  if(idx>=0){
+    a[idx].Quantite = String((parseFloat(a[idx].Quantite)||0) + (parseFloat(d.Quantite)||0));
+    a[idx].Count = (a[idx].Count||1) + 1;
+    a[idx].Date = d.Date;
+    if(d.Signature) a[idx].Signature = d.Signature;
+  } else {
+    d.Count = 1;
+    a.push(d);
+  }
+  setQ(a);
+}
 
 function renderHisto(){
   const a=getQ(), el=$("histo");
@@ -194,25 +191,55 @@ function renderHisto(){
   el.style.display="block";
   const rows = a.map((d,i)=>`<div class="hrow">
       <span class="bf">${esc(d.BF)}</span>
-      <span>×${esc(d.Quantite)}</span>
-      <span class="grow">${esc(d.ML)} · ${esc(d.Technicien)}${d.Signature?' · 🖊':''}</span>
-      <button class="hdel" data-i="${i}">✕</button>
+      <span class="meta">${esc(d.ML)} · ${esc(d.Technicien)}${d.Signature?' · 🖊':''}</span>
+      <span class="qty">×${esc(d.Quantite)}${d.Count>1?`<span class="grouped">⛓ ${d.Count}</span>`:''}</span>
+      <button class="hdel" data-i="${i}" title="Supprimer">✕</button>
     </div>`).join("");
-  el.innerHTML = `<div class="htitle">📋 ${a.length} ligne(s) en attente
-      <button id="envoyerTout">📤 Envoyer (${a.length})</button></div>${rows}`;
+  el.innerHTML = `<div class="htitle">
+      <span class="lbl">À envoyer · ${a.length} ligne(s)</span>
+      <button class="btn-send" id="envoyerTout">↑ Envoyer (${a.length})</button>
+    </div>${rows}`;
   $("envoyerTout").onclick = flush;
   el.querySelectorAll(".hdel").forEach(b => b.onclick = () => removeAt(+b.dataset.i));
 }
 
+/* ---- Ajout (Valider) ---- */
+$("valider").addEventListener("click", () => {
+  const bf=$("bf").value.trim(), q=$("quantite").value.trim(),
+        ml=$("ml").value.trim(), tech=$("technicien").value.trim();
+  if(!bf||!q||!ml||!tech){ show("Remplis tous les champs obligatoires (*).","err"); return; }
+
+  addLine({
+    Token:SHARED_TOKEN, Date:nowStr(), BF:bf, Technicien:tech, ML:ml,
+    Quantite:q, Signature: hasSign ? cv.toDataURL("image/png") : ""
+  });
+  show("Ligne ajoutée ✓","ok");
+  $("bf").value=$("quantite").value=$("ml").value="";
+  ctx.clearRect(0,0,cv.width,cv.height); hasSign=false;
+  $("bf").focus();
+  renderHisto();
+});
+
+/* ---- Envoi vers le flow ---- */
+async function send(d){
+  if(FLOW_URL.startsWith("COLLER")){ show("⚠ URL du flow non configurée.","err"); return false; }
+  const payload = { Token:d.Token, Date:d.Date, BF:d.BF, Technicien:d.Technicien,
+                    ML:d.ML, Quantite:d.Quantite, Signature:d.Signature };
+  try{
+    const r = await fetch(FLOW_URL, { method:"POST",
+      headers:{ "Content-Type":"text/plain" }, body: JSON.stringify(payload) });
+    return r.ok;
+  }catch(_){ return false; }
+}
+
 async function flush(){
-  let a=getQ();
-  if(!a.length) return;
-  const btn=$("envoyerTout"); if(btn){ btn.disabled=true; }
+  let a=getQ(); if(!a.length) return;
+  const btn=$("envoyerTout"); if(btn) btn.disabled=true;
   show("Envoi…","ok");
   let sent=0;
   for(let i=0;i<a.length;){ if(await send(a[i])){ a.splice(i,1); setQ(a); sent++; } else break; }
   renderHisto();
-  if(!getQ().length) show(`Envoyé ✅ (${sent} ligne(s))`,"ok");
+  if(!getQ().length) show(`Envoyé ✓ (${sent} ligne(s))`,"ok");
   else show(`${sent} envoyée(s), ${getQ().length} restante(s). Réessaie « Envoyer ».`,"err");
 }
 window.addEventListener("online", () => { if(getQ().length) flush(); });
