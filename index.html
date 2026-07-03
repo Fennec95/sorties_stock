@@ -288,7 +288,7 @@ async function send(d){
                     ML:d.ML, Quantite:d.Quantite, Signature:d.Signature };
   try{
     const r = await fetch(FLOW_URL, { method:"POST",
-      headers:{ "Content-Type":"text/plain" }, body: JSON.stringify(payload) });
+      headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
     return r.ok;
   }catch(_){ return false; }
 }
