@@ -135,7 +135,7 @@
 <label>Date</label>
 <div id="date"></div>
 
-<label>Signature</label>
+<label>Signature <span class="req">*</span></label>
 <canvas id="sign"></canvas>
 <div class="sign-row"><button type="button" class="btn-clear" id="clearSign">Effacer</button></div>
 
@@ -269,6 +269,7 @@ $("valider").addEventListener("click", () => {
   const bf=$("bf").value.trim(), q=$("quantite").value.trim(),
         ml=$("ml").value.trim(), tech=$("technicien").value.trim();
   if(!bf||!q||!ml||!tech){ show("Remplis tous les champs obligatoires (*).","err"); return; }
+  if(!hasSign){ show("Signature obligatoire — signe avant d'ajouter.","err"); return; }
 
   addLine({
     Token:SHARED_TOKEN, Date:nowStr(), BF:bf, Technicien:tech, ML:ml,
