@@ -123,11 +123,18 @@
 </div>
 <div id="reader"></div>
 
+<label>Libellé <span class="req">*</span></label>
+<div class="row">
+  <input type="text" id="libelle" autocomplete="off" placeholder="Scanner ou saisir">
+  <button type="button" class="btn-scan" id="scanBtnLib">⊞ Scanner</button>
+</div>
+<div id="readerLib"></div>
+
 <label>Quantité <span class="req">*</span></label>
 <input type="number" id="quantite" inputmode="numeric" min="0" placeholder="0">
 
 <label>ML <span class="req">*</span></label>
-<input type="text" id="ml" autocomplete="off">
+<input type="text" id="ml" inputmode="numeric" autocomplete="off" placeholder="8 chiffres (complété par des zéros)">
 
 <label>Technicien <span class="req">*</span></label>
 <input type="text" id="technicien" autocomplete="off">
@@ -172,6 +179,8 @@ const SHARED_TOKEN = "ae9ea55b7439835b8d05d167738ec8160b1496ca4a77b408366c4c2e80
 const $ = id => document.getElementById(id);
 const msg = $("msg");
 function show(t,cls){ msg.textContent=t; msg.className=cls; }
+// ML : uniquement des chiffres, complété à 8 par des zéros à gauche
+function padML(v){ v=String(v).replace(/\D/g,''); return v ? v.padStart(8,'0') : ''; }
 
 /* ---- Date affichée (auto) ---- */
 function nowStr(){
@@ -181,28 +190,35 @@ function nowStr(){
 $("date").textContent = nowStr();
 setInterval(()=> $("date").textContent = nowStr(), 30000);
 
-/* ---- Scanner code-barres (caméra) ---- */
-let scanner=null, scanning=false;
-$("scanBtn").addEventListener("click", async () => {
-  const reader=$("reader");
-  if(scanning){ await stopScan(); return; }
-  reader.style.display="block"; $("scanBtn").textContent="✕ Fermer";
-  scanner=new Html5Qrcode("reader");
+/* ---- Scanner code-barres (caméra) — générique BF et Libellé ---- */
+let scanner=null, scanning=false, scanBtnCur=null;
+async function stopScan(){
+  if(scanner){ try{ await scanner.stop(); scanner.clear(); }catch(_){} }
+  scanner=null; scanning=false;
+  if(scanBtnCur) scanBtnCur.textContent="⊞ Scanner";
+  scanBtnCur=null;
+  $("reader").style.display="none"; $("readerLib").style.display="none";
+}
+async function toggleScan(inputId, readerId, btn){
+  const wasThis = scanning && scanBtnCur===btn;
+  if(scanning) await stopScan();
+  if(wasThis) return;
+  const reader=$(readerId);
+  reader.style.display="block"; btn.textContent="✕ Fermer"; scanBtnCur=btn;
+  scanner=new Html5Qrcode(readerId);
   try{
     await scanner.start({ facingMode:"environment" },
       { fps:10, qrbox:{ width:260, height:140 } },
-      decoded => { $("bf").value=decoded; navigator.vibrate && navigator.vibrate(80); stopScan(); },
+      decoded => { $(inputId).value=decoded; navigator.vibrate && navigator.vibrate(80); stopScan(); },
       ()=>{});
     scanning=true;
   }catch(e){
-    show("Caméra inaccessible. Autorise-la, ou saisis le BF à la main.","err");
-    reader.style.display="none"; $("scanBtn").textContent="⊞ Scanner";
+    show("Caméra inaccessible. Autorise-la, ou saisis à la main.","err");
+    reader.style.display="none"; btn.textContent="⊞ Scanner"; scanBtnCur=null; scanner=null;
   }
-});
-async function stopScan(){
-  if(scanner){ try{ await scanner.stop(); scanner.clear(); }catch(_){} }
-  scanning=false; $("reader").style.display="none"; $("scanBtn").textContent="⊞ Scanner";
 }
+$("scanBtn").addEventListener("click", ()=>toggleScan("bf","reader",$("scanBtn")));
+$("scanBtnLib").addEventListener("click", ()=>toggleScan("libelle","readerLib",$("scanBtnLib")));
 
 /* ---- Pavé signature ---- */
 const cv=$("sign"), ctx=cv.getContext("2d");
@@ -221,30 +237,16 @@ function end(){ drawing=false; }
 cv.addEventListener("mousedown",start); cv.addEventListener("mousemove",move); window.addEventListener("mouseup",end);
 cv.addEventListener("touchstart",start,{passive:false}); cv.addEventListener("touchmove",move,{passive:false}); cv.addEventListener("touchend",end);
 $("clearSign").addEventListener("click", ()=>{ ctx.clearRect(0,0,cv.width,cv.height); hasSign=false; });
+$("ml").addEventListener("blur", ()=>{ if($("ml").value.trim()) $("ml").value=padML($("ml").value); });
 
-/* ---- Liste locale + regroupement par item ---- */
+/* ---- Liste locale (chaque ajout = une ligne, PAS de cumul de quantité) ---- */
 const KEY="sorties_pending";
 function getQ(){ try{ return JSON.parse(localStorage.getItem(KEY))||[] }catch{ return [] } }
 function setQ(a){ localStorage.setItem(KEY, JSON.stringify(a)); }
 function removeAt(i){ const a=getQ(); a.splice(i,1); setQ(a); renderHisto(); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-// "même item" = même BF + même ML + même Technicien
-function keyOf(d){ return [d.BF.trim().toLowerCase(), d.ML.trim().toLowerCase(), d.Technicien.trim().toLowerCase()].join("|"); }
 
-function addLine(d){
-  const a=getQ();
-  const idx=a.findIndex(x => keyOf(x)===keyOf(d));
-  if(idx>=0){
-    a[idx].Quantite = String((parseFloat(a[idx].Quantite)||0) + (parseFloat(d.Quantite)||0));
-    a[idx].Count = (a[idx].Count||1) + 1;
-    a[idx].Date = d.Date;
-    if(d.Signature) a[idx].Signature = d.Signature;
-  } else {
-    d.Count = 1;
-    a.push(d);
-  }
-  setQ(a);
-}
+function addLine(d){ const a=getQ(); a.push(d); setQ(a); }
 
 function renderHisto(){
   const a=getQ(), el=$("histo");
@@ -252,31 +254,31 @@ function renderHisto(){
   el.style.display="block";
   const rows = a.map((d,i)=>`<div class="hrow">
       <span class="bf">${esc(d.BF)}</span>
-      <span class="meta">${esc(d.ML)} · ${esc(d.Technicien)}${d.Signature?' · 🖊':''}</span>
-      <span class="qty">×${esc(d.Quantite)}${d.Count>1?`<span class="grouped">⛓ ${d.Count}</span>`:''}</span>
+      <span class="meta">${esc(d.Libelle||'')} · ${esc(d.ML)} · ${esc(d.Technicien)}${d.Signature?' · 🖊':''}</span>
+      <span class="qty">×${esc(d.Quantite)}</span>
       <button class="hdel" data-i="${i}" title="Supprimer">✕</button>
     </div>`).join("");
   el.innerHTML = `<div class="htitle">
       <span class="lbl">À envoyer · ${a.length} ligne(s)</span>
       <button class="btn-send" id="envoyerTout">↑ Envoyer (${a.length})</button>
     </div>${rows}`;
-  $("envoyerTout").onclick = openConfirm;
+  $("envoyerTout").onclick = flush;
   el.querySelectorAll(".hdel").forEach(b => b.onclick = () => removeAt(+b.dataset.i));
 }
 
 /* ---- Ajout (Valider) ---- */
 $("valider").addEventListener("click", () => {
-  const bf=$("bf").value.trim(), q=$("quantite").value.trim(),
-        ml=$("ml").value.trim(), tech=$("technicien").value.trim();
-  if(!bf||!q||!ml||!tech){ show("Remplis tous les champs obligatoires (*).","err"); return; }
+  const bf=$("bf").value.trim(), lib=$("libelle").value.trim(), q=$("quantite").value.trim(),
+        ml=padML($("ml").value), tech=$("technicien").value.trim();
+  if(!bf||!lib||!q||!ml||!tech){ show("Remplis tous les champs obligatoires (*).","err"); return; }
   if(!hasSign){ show("Signature obligatoire — signe avant d'ajouter.","err"); return; }
 
   addLine({
-    Token:SHARED_TOKEN, Date:nowStr(), BF:bf, Technicien:tech, ML:ml,
-    Quantite:q, Signature: hasSign ? cv.toDataURL("image/png") : ""
+    Token:SHARED_TOKEN, Date:nowStr(), BF:bf, Libelle:lib, Technicien:tech, ML:ml,
+    Quantite:q, Signature: cv.toDataURL("image/png")
   });
   show("Ligne ajoutée ✓","ok");
-  $("bf").value=$("quantite").value=$("ml").value="";
+  $("bf").value=$("libelle").value=$("quantite").value=$("ml").value="";
   ctx.clearRect(0,0,cv.width,cv.height); hasSign=false;
   $("bf").focus();
   renderHisto();
@@ -285,7 +287,7 @@ $("valider").addEventListener("click", () => {
 /* ---- Envoi vers le flow ---- */
 async function send(d){
   if(FLOW_URL.startsWith("COLLER")){ show("⚠ URL du flow non configurée.","err"); return false; }
-  const payload = { Token:d.Token, Date:d.Date, BF:d.BF, Technicien:d.Technicien,
+  const payload = { Token:d.Token, Date:d.Date, BF:d.BF, Libelle:d.Libelle, Technicien:d.Technicien,
                     ML:d.ML, Quantite:d.Quantite, Signature:d.Signature };
   try{
     const r = await fetch(FLOW_URL, { method:"POST",
