@@ -42,6 +42,10 @@
   .btn-add:disabled{ background:#39414c; color:#7d8493; }
   #reader{ width:100%; margin-top:10px; border-radius:var(--radius); overflow:hidden; display:none; }
   #date{ color:var(--muted); font-size:14px; padding:4px 2px; }
+  #rawScan{ display:none; margin-top:8px; padding:9px 11px; border-radius:8px;
+            background:var(--surface2); border:1px solid var(--line);
+            font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px;
+            color:var(--warn); word-break:break-all; }
   canvas#sign{ width:100%; height:150px; border:1px solid var(--line);
                border-radius:var(--radius); touch-action:none; background:var(--surface); }
   .sign-row{ display:flex; justify-content:flex-end; margin-top:8px; }
@@ -122,6 +126,7 @@
   <button type="button" class="btn-scan" id="scanBtn">⊞ Scanner</button>
 </div>
 <div id="reader"></div>
+<div id="rawScan"></div>
 
 <label>Libellé <span class="req">*</span></label>
 <div class="row">
@@ -182,6 +187,23 @@ function show(t,cls){ msg.textContent=t; msg.className=cls; }
 // ML : uniquement des chiffres, complété à 8 par des zéros à gauche
 function padML(v){ v=String(v).replace(/\D/g,''); return v ? v.padStart(8,'0') : ''; }
 
+/* Un seul scan → BF + Libellé.
+   Si le code contient un séparateur, on découpe : avant = BF, après = Libellé. */
+const SEPARATORS = ["|",";","\t","~","^","#"];
+function applyScan(raw){
+  const rs=$("rawScan");
+  rs.textContent = "Scan brut : " + raw;
+  rs.style.display = "block";
+  const sep = SEPARATORS.find(s => raw.includes(s));
+  if(sep){
+    const parts = raw.split(sep);
+    $("bf").value = parts[0].trim();
+    $("libelle").value = parts.slice(1).join(sep).trim();
+  } else {
+    $("bf").value = raw.trim();   // pas de séparateur : tout dans BF
+  }
+}
+
 /* ---- Date affichée (auto) ---- */
 function nowStr(){
   const d=new Date(), p=n=>String(n).padStart(2,"0");
@@ -209,7 +231,10 @@ async function toggleScan(inputId, readerId, btn){
   try{
     await scanner.start({ facingMode:"environment" },
       { fps:10, qrbox:{ width:260, height:140 } },
-      decoded => { $(inputId).value=decoded; navigator.vibrate && navigator.vibrate(80); stopScan(); },
+      decoded => {
+        if(inputId==="bf") applyScan(decoded); else $(inputId).value=decoded;
+        navigator.vibrate && navigator.vibrate(80); stopScan();
+      },
       ()=>{});
     scanning=true;
   }catch(e){
