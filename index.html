@@ -84,16 +84,6 @@
   .m-head .t{ font-size:16px; font-weight:700; }
   .m-x{ background:transparent; color:var(--muted); padding:4px 8px; font-size:16px; }
   .m-sub{ color:var(--warn); font-size:12.5px; margin:6px 0 14px; letter-spacing:.3px; }
-  #mBody{ flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-  .m-row{ display:flex; align-items:center; gap:12px; padding:13px 2px; border-bottom:1px solid var(--line); }
-  .m-info{ flex:1; min-width:0; }
-  .m-bf{ display:block; font-weight:700; font-size:15px; }
-  .m-meta{ display:block; color:var(--muted); font-size:12px; margin-top:3px;
-           overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .m-qty{ width:88px; text-align:center; font-size:21px; font-weight:800;
-          color:#ff5b5b !important; background:rgba(255,45,45,.10);
-          border:2px solid #ff2d2d; border-radius:10px; padding:11px 6px; }
-  .m-qty:focus{ box-shadow:0 0 0 4px rgba(255,45,45,.28); border-color:#ff4d4d; }
   .m-actions{ display:flex; gap:10px; margin-top:18px; }
   .m-cancel{ flex:1; background:var(--surface2); color:var(--txt); border:1px solid var(--line); }
   .m-confirm{ flex:2; background:var(--accent); color:#04210f; font-weight:700; }
@@ -108,8 +98,6 @@
     .hrow{ gap:8px; padding:11px 12px; }
     .hrow .bf{ font-size:14px; }
     .qty{ padding:4px 8px; font-size:12px; }
-    .m-qty{ width:74px; font-size:19px; padding:10px 4px; }
-    .m-bf{ font-size:14px; }
   }
   @media (max-height:560px){
     canvas#sign{ height:110px; }
@@ -147,10 +135,6 @@
 <label>Date</label>
 <div id="date"></div>
 
-<label>Signature <span class="req">*</span></label>
-<canvas id="sign"></canvas>
-<div class="sign-row"><button type="button" class="btn-clear" id="clearSign">Effacer</button></div>
-
 <div id="histo"></div>
 
 <button type="button" class="btn-add" id="valider">+ Ajouter à la liste</button>
@@ -160,14 +144,15 @@
 <div id="overlay">
   <div id="modal">
     <div class="m-head">
-      <span class="t">Vérifier les quantités</span>
+      <span class="t">Signature</span>
       <button type="button" class="m-x" id="mClose">✕</button>
     </div>
-    <div class="m-sub">⚠ Contrôle avant envoi — ajuste les quantités si besoin</div>
-    <div id="mBody"></div>
+    <div class="m-sub" id="mSub">Signe pour valider l'envoi des lignes</div>
+    <canvas id="sign"></canvas>
+    <div class="sign-row"><button type="button" class="btn-clear" id="clearSign">Effacer</button></div>
     <div class="m-actions">
       <button type="button" class="m-cancel" id="mCancel">Annuler</button>
-      <button type="button" class="m-confirm" id="mConfirm">↑ Confirmer l'envoi</button>
+      <button type="button" class="m-confirm" id="mConfirm">↑ Signer et envoyer</button>
     </div>
   </div>
 </div>
@@ -279,7 +264,7 @@ function renderHisto(){
   el.style.display="block";
   const rows = a.map((d,i)=>`<div class="hrow">
       <span class="bf">${esc(d.BF)}</span>
-      <span class="meta">${esc(d.Libelle||'')} · ${esc(d.ML)} · ${esc(d.Technicien)}${d.Signature?' · 🖊':''}</span>
+      <span class="meta">${esc(d.Libelle||'')} · ${esc(d.ML)} · ${esc(d.Technicien)}</span>
       <span class="qty">×${esc(d.Quantite)}</span>
       <button class="hdel" data-i="${i}" title="Supprimer">✕</button>
     </div>`).join("");
@@ -287,7 +272,7 @@ function renderHisto(){
       <span class="lbl">À envoyer · ${a.length} ligne(s)</span>
       <button class="btn-send" id="envoyerTout">↑ Envoyer (${a.length})</button>
     </div>${rows}`;
-  $("envoyerTout").onclick = flush;
+  $("envoyerTout").onclick = openSign;
   el.querySelectorAll(".hdel").forEach(b => b.onclick = () => removeAt(+b.dataset.i));
 }
 
@@ -296,15 +281,14 @@ $("valider").addEventListener("click", () => {
   const bf=$("bf").value.trim(), lib=$("libelle").value.trim(), q=$("quantite").value.trim(),
         ml=padML($("ml").value), tech=$("technicien").value.trim();
   if(!bf||!lib||!q||!ml||!tech){ show("Remplis tous les champs obligatoires (*).","err"); return; }
-  if(!hasSign){ show("Signature obligatoire — signe avant d'ajouter.","err"); return; }
 
+  // La signature est apposée une seule fois, au moment de l'envoi
   addLine({
     Token:SHARED_TOKEN, Date:nowStr(), BF:bf, Libelle:lib, Technicien:tech, ML:ml,
-    Quantite:q, Signature: cv.toDataURL("image/png")
+    Quantite:q, Signature:""
   });
   show("Ligne ajoutée ✓","ok");
   $("bf").value=$("libelle").value=$("quantite").value=$("ml").value="";
-  ctx.clearRect(0,0,cv.width,cv.height); hasSign=false;
   $("bf").focus();
   renderHisto();
 });
@@ -331,34 +315,31 @@ async function flush(){
   if(!getQ().length) show(`Envoyé ✓ (${sent} ligne(s))`,"ok");
   else show(`${sent} envoyée(s), ${getQ().length} restante(s). Réessaie « Envoyer ».`,"err");
 }
-/* ---- Modale de vérification avant envoi ---- */
-const overlay=$("overlay"), mBody=$("mBody");
-function openConfirm(){
-  const a=getQ(); if(!a.length) return;
-  mBody.innerHTML = a.map((d,i)=>`<div class="m-row">
-      <div class="m-info">
-        <span class="m-bf">${esc(d.BF)}</span>
-        <span class="m-meta">${esc(d.ML)} · ${esc(d.Technicien)}${d.Count>1?` · ⛓ ${d.Count} ajouts`:''}</span>
-      </div>
-      <input class="m-qty" type="number" inputmode="numeric" min="0" data-i="${i}" value="${esc(d.Quantite)}">
-    </div>`).join("");
+/* ---- Modale de signature, au moment de l'envoi ---- */
+const overlay=$("overlay");
+function openSign(){
+  if(!getQ().length) return;
   overlay.style.display="flex";
+  $("mSub").textContent = "Signe pour valider l'envoi des lignes";
+  $("mSub").style.color = "var(--warn)";
+  // le canvas doit être mesuré une fois la modale visible
+  requestAnimationFrame(()=>{ fitCanvas(); hasSign=false; });
 }
-function closeConfirm(){ overlay.style.display="none"; }
-$("mClose").onclick = closeConfirm;
-$("mCancel").onclick = closeConfirm;
-overlay.addEventListener("click", e => { if(e.target===overlay) closeConfirm(); });
+function closeSign(){ overlay.style.display="none"; }
+$("mClose").onclick = closeSign;
+$("mCancel").onclick = closeSign;
+overlay.addEventListener("click", e => { if(e.target===overlay) closeSign(); });
 
 $("mConfirm").onclick = () => {
-  const a=getQ();
-  mBody.querySelectorAll(".m-qty").forEach(inp => {
-    const i=+inp.dataset.i, v=parseFloat(inp.value);
-    if(a[i]) a[i].Quantite = String(isNaN(v) ? 0 : v);
-  });
-  const kept = a.filter(d => (parseFloat(d.Quantite)||0) > 0);
-  setQ(kept); renderHisto(); closeConfirm();
-  if(kept.length) flush();
-  else show("Aucune ligne à envoyer (toutes à 0).","err");
+  if(!hasSign){
+    $("mSub").textContent = "Signature requise — signe dans le cadre.";
+    $("mSub").style.color = "var(--danger)";
+    return;
+  }
+  const sig = cv.toDataURL("image/png");
+  const a = getQ(); a.forEach(d => d.Signature = sig); setQ(a);
+  closeSign();
+  flush();
 };
 
 window.addEventListener("online", () => { if(getQ().length) flush(); });
