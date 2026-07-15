@@ -40,6 +40,9 @@
   .btn-add{ background:var(--accent); color:#04210f; width:100%; font-size:16px;
             font-weight:700; padding:16px; margin-top:20px; letter-spacing:.5px; }
   .btn-add:disabled{ background:#39414c; color:#7d8493; }
+  .btn-send-full{ background:var(--accent2); color:#fff; width:100%; font-size:16px;
+                  font-weight:700; padding:16px; margin-top:14px; letter-spacing:.3px; }
+  .btn-send-full:disabled{ background:#39414c; color:#7d8493; }
   #reader{ width:100%; margin-top:10px; border-radius:var(--radius); overflow:hidden; display:none; }
   #date{ color:var(--muted); font-size:14px; padding:4px 2px; }
   #rawScan{ display:none; margin-top:8px; padding:9px 11px; border-radius:8px;
@@ -131,9 +134,11 @@
 <label>Date</label>
 <div id="date"></div>
 
+<button type="button" class="btn-add" id="valider">+ Ajouter à la liste</button>
+
 <div id="histo"></div>
 
-<button type="button" class="btn-add" id="valider">+ Ajouter à la liste</button>
+<button type="button" class="btn-send-full" id="envoyerBtn" style="display:none">↑ Envoyer</button>
 
 <div id="msg"></div>
 
@@ -264,8 +269,8 @@ function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;'
 function addLine(d){ const a=getQ(); a.push(d); setQ(a); }
 
 function renderHisto(){
-  const a=getQ(), el=$("histo");
-  if(!a.length){ el.style.display="none"; el.innerHTML=""; return; }
+  const a=getQ(), el=$("histo"), sendBtn=$("envoyerBtn");
+  if(!a.length){ el.style.display="none"; el.innerHTML=""; sendBtn.style.display="none"; return; }
   el.style.display="block";
   const rows = a.map((d,i)=>`<div class="hrow">
       <span class="bf">${esc(d.BF)}</span>
@@ -273,13 +278,11 @@ function renderHisto(){
       <span class="qty">×${esc(d.Quantite)}</span>
       <button class="hdel" data-i="${i}" title="Supprimer">✕</button>
     </div>`).join("");
-  el.innerHTML = `<div class="htitle">
-      <span class="lbl">À envoyer · ${a.length} ligne(s)</span>
-      <button class="btn-send" id="envoyerTout">↑ Envoyer (${a.length})</button>
-    </div>${rows}`;
-  $("envoyerTout").onclick = openSign;
+  el.innerHTML = `<div class="htitle"><span class="lbl">À envoyer · ${a.length} ligne(s)</span></div>${rows}`;
   el.querySelectorAll(".hdel").forEach(b => b.onclick = () => removeAt(+b.dataset.i));
+  sendBtn.style.display="block"; sendBtn.disabled=false; sendBtn.textContent=`↑ Envoyer (${a.length})`;
 }
+$("envoyerBtn").addEventListener("click", openSign);
 
 /* ---- Ajout (Valider) ---- */
 $("valider").addEventListener("click", () => {
@@ -312,7 +315,7 @@ async function send(d){
 
 async function flush(){
   let a=getQ(); if(!a.length) return;
-  const btn=$("envoyerTout"); if(btn) btn.disabled=true;
+  const btn=$("envoyerBtn"); if(btn) btn.disabled=true;
   show("Envoi…","ok");
   let sent=0;
   for(let i=0;i<a.length;){ if(await send(a[i])){ a.splice(i,1); setQ(a); sent++; } else break; }
