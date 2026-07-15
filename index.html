@@ -154,6 +154,7 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="ref.js"></script>
 <script>
 /* ====================================================================
    CONFIG
@@ -182,7 +183,15 @@ function applyScan(raw){
     $("libelle").value = parts.slice(1).join(sep).trim();
   } else {
     $("bf").value = raw.trim();   // pas de séparateur : tout dans BF
+    fillLibelleFromRef(raw.trim());
   }
+}
+
+/* Référentiel BF -> Libellé (fichier ref.js) : auto-remplissage */
+function fillLibelleFromRef(bf){
+  const k = String(bf||'').trim();
+  const lib = window.REF ? (REF[k] || REF[k.toUpperCase()]) : null;
+  if(lib) $("libelle").value = lib;
 }
 
 /* ---- Date affichée (auto) ---- */
@@ -243,6 +252,7 @@ cv.addEventListener("mousedown",start); cv.addEventListener("mousemove",move); w
 cv.addEventListener("touchstart",start,{passive:false}); cv.addEventListener("touchmove",move,{passive:false}); cv.addEventListener("touchend",end);
 $("clearSign").addEventListener("click", ()=>{ ctx.clearRect(0,0,cv.width,cv.height); hasSign=false; });
 $("ml").addEventListener("blur", ()=>{ if($("ml").value.trim()) $("ml").value=padML($("ml").value); });
+$("bf").addEventListener("change", ()=> fillLibelleFromRef($("bf").value));
 
 /* ---- Liste locale (chaque ajout = une ligne, PAS de cumul de quantité) ---- */
 const KEY="sorties_pending";
