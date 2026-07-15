@@ -116,12 +116,8 @@
 <div id="reader"></div>
 <div id="rawScan"></div>
 
-<label>Libellé <span class="req">*</span></label>
-<div class="row">
-  <input type="text" id="libelle" autocomplete="off" placeholder="Scanner ou saisir">
-  <button type="button" class="btn-scan" id="scanBtnLib">⊞ Scanner</button>
-</div>
-<div id="readerLib"></div>
+<label>Libellé</label>
+<input type="text" id="libelle" autocomplete="off" placeholder="Rempli par le scan, ou à saisir">
 
 <label>Quantité <span class="req">*</span></label>
 <input type="number" id="quantite" inputmode="numeric" min="0" placeholder="0">
@@ -204,7 +200,7 @@ async function stopScan(){
   scanner=null; scanning=false;
   if(scanBtnCur) scanBtnCur.textContent="⊞ Scanner";
   scanBtnCur=null;
-  $("reader").style.display="none"; $("readerLib").style.display="none";
+  $("reader").style.display="none";
 }
 async function toggleScan(inputId, readerId, btn){
   const wasThis = scanning && scanBtnCur===btn;
@@ -228,7 +224,6 @@ async function toggleScan(inputId, readerId, btn){
   }
 }
 $("scanBtn").addEventListener("click", ()=>toggleScan("bf","reader",$("scanBtn")));
-$("scanBtnLib").addEventListener("click", ()=>toggleScan("libelle","readerLib",$("scanBtnLib")));
 
 /* ---- Pavé signature ---- */
 const cv=$("sign"), ctx=cv.getContext("2d");
@@ -280,7 +275,7 @@ function renderHisto(){
 $("valider").addEventListener("click", () => {
   const bf=$("bf").value.trim(), lib=$("libelle").value.trim(), q=$("quantite").value.trim(),
         ml=padML($("ml").value), tech=$("technicien").value.trim();
-  if(!bf||!lib||!q||!ml||!tech){ show("Remplis tous les champs obligatoires (*).","err"); return; }
+  if(!bf||!q||!ml||!tech){ show("Remplis BF, Quantité, ML et Technicien.","err"); return; }
 
   // La signature est apposée une seule fois, au moment de l'envoi
   addLine({
