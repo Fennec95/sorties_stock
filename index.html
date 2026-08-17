@@ -126,7 +126,7 @@
 <input type="number" id="quantite" inputmode="numeric" min="0" placeholder="0">
 
 <label>ML <span class="req">*</span></label>
-<input type="text" id="ml" inputmode="numeric" autocomplete="off" placeholder="8 chiffres (complété par des zéros)">
+<input type="text" id="ml" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="8 chiffres exactement">
 
 <label>Technicien <span class="req">*</span></label>
 <input type="text" id="technicien" autocomplete="off">
@@ -171,8 +171,7 @@ const SHARED_TOKEN = "ae9ea55b7439835b8d05d167738ec8160b1496ca4a77b408366c4c2e80
 const $ = id => document.getElementById(id);
 const msg = $("msg");
 function show(t,cls){ msg.textContent=t; msg.className=cls; }
-// ML : uniquement des chiffres, complété à 8 par des zéros à gauche
-function padML(v){ v=String(v).replace(/\D/g,''); return v ? v.padStart(8,'0') : ''; }
+// ML : verrouillé à exactement 8 chiffres
 
 /* Un seul scan → BF + Libellé.
    Si le code contient un séparateur, on découpe : avant = BF, après = Libellé. */
@@ -256,7 +255,7 @@ function end(){ drawing=false; }
 cv.addEventListener("mousedown",start); cv.addEventListener("mousemove",move); window.addEventListener("mouseup",end);
 cv.addEventListener("touchstart",start,{passive:false}); cv.addEventListener("touchmove",move,{passive:false}); cv.addEventListener("touchend",end);
 $("clearSign").addEventListener("click", ()=>{ ctx.clearRect(0,0,cv.width,cv.height); hasSign=false; });
-$("ml").addEventListener("blur", ()=>{ if($("ml").value.trim()) $("ml").value=padML($("ml").value); });
+$("ml").addEventListener("input", ()=>{ $("ml").value = $("ml").value.replace(/\D/g,'').slice(0,8); });
 $("bf").addEventListener("change", ()=> fillLibelleFromRef($("bf").value));
 
 /* ---- Liste locale (chaque ajout = une ligne, PAS de cumul de quantité) ---- */
@@ -287,8 +286,9 @@ $("envoyerBtn").addEventListener("click", openSign);
 /* ---- Ajout (Valider) ---- */
 $("valider").addEventListener("click", () => {
   const bf=$("bf").value.trim(), lib=$("libelle").value.trim(), q=$("quantite").value.trim(),
-        ml=padML($("ml").value), tech=$("technicien").value.trim();
-  if(!bf||!q||!ml||!tech){ show("Remplis BF, Quantité, ML et Technicien.","err"); return; }
+        ml=$("ml").value.replace(/\D/g,''), tech=$("technicien").value.trim();
+  if(!bf||!q||!tech){ show("Remplis BF, Quantité et Technicien.","err"); return; }
+  if(ml.length!==8){ show("Le ML doit contenir exactement 8 chiffres.","err"); return; }
 
   // La signature est apposée une seule fois, au moment de l'envoi
   addLine({
