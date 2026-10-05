@@ -166,6 +166,8 @@
    ==================================================================== */
 const FLOW_URL = "https://defaultcae7d06108f340dd80c33c0b888922.4a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8de5db3a706c48b4aaae426a5dd86d2b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=UixePC7v2TgzRcoBCI2F0n_Jfxy_WEUokZPHeFbHZGY";
 const SHARED_TOKEN = "ae9ea55b7439835b8d05d167738ec8160b1496ca4a77b408366c4c2e8060b2ca";
+// Flow "Référentiel" : renvoie la table tblRef (BF / Libelle) de l'Excel SharePoint
+const REF_URL = "COLLER_ICI_URL_DU_FLOW_REFERENTIEL";
 /* ==================================================================== */
 
 const $ = id => document.getElementById(id);
@@ -351,7 +353,29 @@ $("mConfirm").onclick = () => {
   flush();
 };
 
-window.addEventListener("online", () => { if(getQ().length) flush(); });
+/* ---- Référentiel : Excel SharePoint (via flow) > cache local > ref.js de secours ---- */
+const REF_CACHE="ref_cache";
+async function loadRef(){
+  try{ const c=JSON.parse(localStorage.getItem(REF_CACHE)); if(c && Object.keys(c).length) window.REF=c; }catch(_){}
+  if(REF_URL.startsWith("COLLER")) return;
+  try{
+    const r=await fetch(REF_URL, { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ Token:SHARED_TOKEN }) });
+    if(!r.ok) return;
+    const rows=await r.json(), map={};
+    (Array.isArray(rows)?rows:[]).forEach(x=>{
+      const bf=String(x.BF??"").trim(), lib=String(x.Libelle??"").trim();
+      if(bf) map[bf]=lib;
+    });
+    if(Object.keys(map).length){
+      window.REF=map;
+      try{ localStorage.setItem(REF_CACHE, JSON.stringify(map)); }catch(_){}
+    }
+  }catch(_){}
+}
+
+window.addEventListener("online", () => { if(getQ().length) flush(); loadRef(); });
+loadRef();
 renderHisto();
 </script>
 </body>
