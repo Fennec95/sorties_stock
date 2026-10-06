@@ -159,7 +159,6 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="ref.js"></script>
 <script>
 /* ====================================================================
    CONFIG
@@ -194,7 +193,7 @@ function applyScan(raw){
   }
 }
 
-/* Référentiel BF -> Libellé (fichier ref.js) : auto-remplissage */
+/* Référentiel BF -> Libellé (Excel SharePoint) : auto-remplissage */
 function fillLibelleFromRef(bf){
   const k = String(bf||'').trim();
   const lib = window.REF ? (REF[k] || REF[k.toUpperCase()]) : null;
@@ -353,7 +352,7 @@ $("mConfirm").onclick = () => {
   flush();
 };
 
-/* ---- Référentiel : Excel SharePoint (via flow) > cache local > ref.js de secours ---- */
+/* ---- Référentiel : Excel SharePoint (via flow), avec cache local pour le hors-ligne ---- */
 const REF_CACHE="ref_cache";
 async function loadRef(){
   try{ const c=JSON.parse(localStorage.getItem(REF_CACHE)); if(c && Object.keys(c).length) window.REF=c; }catch(_){}
