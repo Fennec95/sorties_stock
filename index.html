@@ -223,12 +223,31 @@ async function toggleScan(inputId, readerId, btn){
   if(wasThis) return;
   const reader=$(readerId);
   reader.style.display="block"; btn.textContent="✕ Fermer"; scanBtnCur=btn;
-  scanner=new Html5Qrcode(readerId);
+  // Codes-barres linéaires uniquement (étiquettes en Code 39) + lecteur natif du téléphone si dispo
+  const F=window.Html5QrcodeSupportedFormats;
+  scanner=new Html5Qrcode(readerId, {
+    verbose:false,
+    formatsToSupport: F ? [F.CODE_39, F.CODE_128, F.CODE_93, F.EAN_13] : undefined,
+    experimentalFeatures:{ useBarCodeDetectorIfSupported:true }
+  });
+  // Code 39 n'a pas de somme de contrôle : une lecture partielle peut sembler valide.
+  // BF complet (BF + 16 chiffres) = accepté tout de suite ; sinon il faut 3 lectures identiques.
+  const BF_FULL=/^BF\d{16}$/;
+  let lastRead="", sameCount=0;
   try{
     await scanner.start({ facingMode:"environment" },
-      { fps:10, qrbox:{ width:260, height:140 } },
+      { fps:10,
+        qrbox:(w,h)=>({ width:Math.floor(w*0.92), height:Math.floor(Math.min(h*0.45,160)) }),
+        videoConstraints:{ facingMode:"environment", width:{ideal:1920}, height:{ideal:1080} } },
       decoded => {
-        if(inputId==="bf") applyScan(decoded); else $(inputId).value=decoded;
+        const v=String(decoded).trim();
+        if(inputId==="bf" && !BF_FULL.test(v)){
+          sameCount = (v===lastRead) ? sameCount+1 : 1; lastRead=v;
+          const rs=$("rawScan"); rs.style.display="block";
+          rs.textContent=`Lecture incomplète (${v}) — recentre tout le code-barres…`;
+          if(sameCount<3) return;
+        }
+        if(inputId==="bf") applyScan(v); else $(inputId).value=v;
         navigator.vibrate && navigator.vibrate(80); stopScan();
       },
       ()=>{});
