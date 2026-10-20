@@ -22,12 +22,13 @@
   label{ display:block; font-size:12.5px; letter-spacing:.4px; color:var(--muted);
          margin:16px 0 6px; text-transform:uppercase; font-weight:600; }
   label .req{ color:var(--accent); }
-  input[type=text],input[type=number]{
+  input[type=text],input[type=number],textarea{
     width:100%; padding:13px 14px; font-size:16px; color:var(--txt);
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
     outline:none; transition:border-color .15s, box-shadow .15s; }
-  input:focus{ border-color:var(--accent2); box-shadow:0 0 0 3px rgba(59,130,246,.18); }
-  input::placeholder{ color:#565d6b; }
+  textarea{ font-family:inherit; resize:vertical; min-height:72px; }
+  input:focus,textarea:focus{ border-color:var(--accent2); box-shadow:0 0 0 3px rgba(59,130,246,.18); }
+  input::placeholder,textarea::placeholder{ color:#565d6b; }
   .row{ display:flex; gap:10px; }
   .row input{ flex:1; }
   button{ font-size:15px; font-weight:600; border:none; border-radius:var(--radius);
@@ -130,6 +131,9 @@
 
 <label>Technicien <span class="req">*</span></label>
 <input type="text" id="technicien" autocomplete="off">
+
+<label>Commentaire</label>
+<textarea id="commentaire" rows="2" maxlength="500" placeholder="N° de série, traçabilité équipement de sécurité…"></textarea>
 
 <label>Date</label>
 <div id="date"></div>
@@ -295,7 +299,7 @@ function renderHisto(){
   el.style.display="block";
   const rows = a.map((d,i)=>`<div class="hrow">
       <span class="bf">${esc(d.BF)}</span>
-      <span class="meta">${esc(d.Libelle||'')} · ${esc(d.ML)} · ${esc(d.Technicien)}</span>
+      <span class="meta">${esc(d.Libelle||'')} · ${esc(d.ML)} · ${esc(d.Technicien)}${d.Commentaire?' · 📝 '+esc(d.Commentaire):''}</span>
       <span class="qty">×${esc(d.Quantite)}</span>
       <button class="hdel" data-i="${i}" title="Supprimer">✕</button>
     </div>`).join("");
@@ -308,16 +312,17 @@ $("envoyerBtn").addEventListener("click", openSign);
 /* ---- Ajout (Valider) ---- */
 $("valider").addEventListener("click", () => {
   const bf=$("bf").value.trim(), lib=$("libelle").value.trim(), q=$("quantite").value.trim(),
-        ml=padML($("ml").value), tech=$("technicien").value.trim();
+        ml=padML($("ml").value), tech=$("technicien").value.trim(),
+        com=$("commentaire").value.trim();
   if(!bf||!q||!ml||!tech){ show("Remplis BF, Quantité, ML et Technicien.","err"); return; }
 
   // La signature est apposée une seule fois, au moment de l'envoi
   addLine({
     Token:SHARED_TOKEN, Date:nowStr(), BF:bf, Libelle:lib, Technicien:tech, ML:ml,
-    Quantite:q, Signature:""
+    Quantite:q, Commentaire:com, Signature:""
   });
   show("Ligne ajoutée ✓","ok");
-  $("bf").value=$("libelle").value=$("quantite").value=$("ml").value="";
+  $("bf").value=$("libelle").value=$("quantite").value=$("ml").value=$("commentaire").value="";
   $("bf").focus();
   renderHisto();
 });
@@ -326,7 +331,7 @@ $("valider").addEventListener("click", () => {
 async function send(d){
   if(FLOW_URL.startsWith("COLLER")){ show("⚠ URL du flow non configurée.","err"); return false; }
   const payload = { Token:d.Token, Date:d.Date, BF:d.BF, Libelle:d.Libelle, Technicien:d.Technicien,
-                    ML:d.ML, Quantite:d.Quantite, Signature:d.Signature };
+                    ML:d.ML, Quantite:d.Quantite, Commentaire:d.Commentaire||"", Signature:d.Signature };
   try{
     const r = await fetch(FLOW_URL, { method:"POST",
       headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
