@@ -364,13 +364,29 @@ $("mClose").onclick = closeSign;
 $("mCancel").onclick = closeSign;
 overlay.addEventListener("click", e => { if(e.target===overlay) closeSign(); });
 
+/* Le trait est clair pour l'écran sombre : pour le PDF (page blanche),
+   on exporte la signature en encre foncée sur fond blanc. */
+function exportSignature(){
+  const w=cv.width, h=cv.height;
+  const ink=document.createElement("canvas"); ink.width=w; ink.height=h;
+  const ic=ink.getContext("2d");
+  ic.drawImage(cv,0,0);
+  ic.globalCompositeOperation="source-in";      // ne garde que la forme du trait
+  ic.fillStyle="#111111"; ic.fillRect(0,0,w,h);  // ... recolorée en foncé
+  const out=document.createElement("canvas"); out.width=w; out.height=h;
+  const oc=out.getContext("2d");
+  oc.fillStyle="#ffffff"; oc.fillRect(0,0,w,h);  // fond blanc
+  oc.drawImage(ink,0,0);
+  return out.toDataURL("image/png");
+}
+
 $("mConfirm").onclick = () => {
   if(!hasSign){
     $("mSub").textContent = "Signature requise — signe dans le cadre.";
     $("mSub").style.color = "var(--danger)";
     return;
   }
-  const sig = cv.toDataURL("image/png");
+  const sig = exportSignature();
   const a = getQ(); a.forEach(d => d.Signature = sig); setQ(a);
   closeSign();
   flush();
